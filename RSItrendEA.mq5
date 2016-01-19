@@ -10,10 +10,10 @@
 input int      StopLoss=38; // StopLoss percentage
 input int      TakeProfit=1000; // TakeProfit percentage
 input int      RSIPeriod=20; // RSI period
-input double   RSIStartLong=30; // 
+input double   RSIStartLong=62; // 
 input double   RSIEndLong=50; //
 input double   RSIStartShort=70.2; //
-input double   RSIEndShort=50; //
+input double   RSIEndShort=34; //
 input int      EA_Magic=12345; // EA Magic Number
 input double   Lot=0.1;          // Lots to Trade
 int rsiHandle; // handle for our rsi indicator
