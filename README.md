@@ -1,2 +1,2 @@
-# ExpertAdvisors-Metatrader5
-Expert Advisors - Trading Robots for the Metatrader 5 trading platform
+# metatrader5 stuff
+Collection of codes for Metatrader 5 platform
