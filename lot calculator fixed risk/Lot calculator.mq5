@@ -98,7 +98,7 @@ int OnCalculate(const int rates_total,
   CommentString+="Risk selected: " + DoubleToString(Risk * 100, 0) + "%\n";
   CommentString+="Risk selected: " + DepositCurrency + " " + DoubleToString(Risk * freeMargin, 2) + "\n";
   CommentString+="-----------------------------------------------------------------\n";
-  CommentString+="Value of one pip trading 1 lot (" + Symbol() + ") : " + DepositCurrency + " " + DoubleToString(PipValue, 3) + "\n";
+  CommentString+="Value of one pip trading 1 lot of " + Symbol() + ": " + DepositCurrency + " " + DoubleToString(PipValue, 3) + "\n";
   CommentString+="Max lots of " + Symbol() + " to trade while risking " + Pips + " pips: " + DoubleToString(lots, 2) + "\n";
   CommentString+="-----------------------------------------------------------------\n";
 
