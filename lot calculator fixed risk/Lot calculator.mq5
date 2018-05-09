@@ -24,8 +24,8 @@
 
 input int Pips = 165; // Stop loss distance from open order
 input double Risk = 0.02; // Free margin fraction you want to risk for the trade
-input bool useAccountBalance = true; // Check to read the actual free margin of your balance, uncheck to specify it
-input int AccountBalance = 2000; // Specify here a simulated balance value 
+input bool useTrueAccountBalance = true; // Check to read the actual free margin of your balance, uncheck to specify it
+input int SimulatedAccountBalance = 2000; // Specify here a simulated balance value 
 double point;
 
 //+------------------------------------------------------------------+
@@ -72,39 +72,60 @@ int OnCalculate(const int rates_total,
                 const int &spread[]
                 )
 {
-  string CommentString = "";
-
   string DepositCurrency = AccountInfoString(ACCOUNT_CURRENCY);
   
   double freeMargin = 0;
-  if(useAccountBalance)
+
+  // Evaluate free margin
+  if(useTrueAccountBalance)
   {
     freeMargin = AccountInfoDouble(ACCOUNT_FREEMARGIN);
   }
   else
   {
-    freeMargin = AccountBalance;
+    freeMargin = SimulatedAccountBalance;
+  }
+  
+  // Check possible errors
+  if(freeMargin <= 0)
+  {
+    Comment("Unable to get free margin value...");
+    return(rates_total);
   }
 
-  //double PipValue = ((((SymbolInfoDouble(Symbol(), SYMBOL_TRADE_TICK_VALUE))*point)/(SymbolInfoDouble(Symbol(),SYMBOL_TRADE_TICK_SIZE))) * LotSize);
-  double PipValue = (((SymbolInfoDouble(Symbol(), SYMBOL_TRADE_TICK_VALUE))*point)/(SymbolInfoDouble(Symbol(),SYMBOL_TRADE_TICK_SIZE)));
+  double tickSize = SymbolInfoDouble(Symbol(), SYMBOL_TRADE_TICK_SIZE);
+  if(tickSize <= 0)
+  {
+    Comment("Unable to get tick size value...");
+    return(rates_total);
+  }
   
-  double lots = Risk * freeMargin / (PipValue * Pips);
-  
+  double pipValue = (((SymbolInfoDouble(Symbol(), SYMBOL_TRADE_TICK_VALUE)) * point) / tickSize);
+  if(pipValue <= 0)
+  {
+    Comment("Unable to get pip value...");
+    return(rates_total);
+  }
+
+  double lots = Risk * freeMargin / (pipValue * Pips);
+  if(lots <= 0)
+  {
+    Comment("Unable to get lot value...");
+    return(rates_total);
+  }
+
   // Truncate lot quantity to 2 decimal digits without rounding it
   lots = floor(lots * 100) / 100;
 
-  CommentString+="\n" + "Your free margin: "+ DepositCurrency + " " + DoubleToString(freeMargin, 2) + "\n";
-  CommentString+="Risk selected: " + DoubleToString(Risk * 100, 0) + "%\n";
-  CommentString+="Risk selected: " + DepositCurrency + " " + DoubleToString(Risk * freeMargin, 2) + "\n";
-  CommentString+="-----------------------------------------------------------------\n";
-  CommentString+="Value of one pip trading 1 lot of " + Symbol() + ": " + DepositCurrency + " " + DoubleToString(PipValue, 3) + "\n";
-  CommentString+="Max lots of " + Symbol() + " to trade while risking " + Pips + " pips: " + DoubleToString(lots, 2) + "\n";
-  CommentString+="-----------------------------------------------------------------\n";
+  string CommentString = "\n" + "Your free margin: "+ DepositCurrency + " " + DoubleToString(freeMargin, 2) + "\n";
+  CommentString += "Risk selected: " + DoubleToString(Risk * 100, 0) + "%\n";
+  CommentString += "Risk selected: " + DepositCurrency + " " + DoubleToString(Risk * freeMargin, 2) + "\n";
+  CommentString += "-----------------------------------------------------------------\n";
+  CommentString += "Value of one pip trading 1 lot of " + Symbol() + ": " + DepositCurrency + " " + DoubleToString(pipValue, 3) + "\n";
+  CommentString += "Max lots of " + Symbol() + " to trade while risking " + IntegerToString(Pips) + " pips: " + DoubleToString(lots, 2) + "\n";
+  CommentString += "-----------------------------------------------------------------\n";
 
   Comment(CommentString);
-
-  //--- return value of prev_calculated for next call
   return(rates_total);
 }
 
