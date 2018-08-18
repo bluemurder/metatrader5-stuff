@@ -235,20 +235,31 @@ void OnChartEvent(const int id,
   // See https://www.mql5.com/en/forum/93077
   // See https://docs.microsoft.com/en-us/dotnet/api/system.windows.forms.keys?redirectedfrom=MSDN&view=netframework-4.7.2
   
-  if(id == CHARTEVENT_KEYDOWN)
+  //if(id == CHARTEVENT_KEYDOWN)
+  //{
+  //  switch(lparam) 
+  //  { 
+  //  case KEY_CTRL:
+  //    Comment("Waiting user to measure pip distance with crosshair cursor...");
+  //    firstPrice = 0.;
+  //    secondPrice = 0.;
+  //    setPipsWithMouse = true;
+  //    break;
+  //  default:
+  //    break;
+  //  } 
+  //  ChartRedraw();
+  //}
+  if (id == CHARTEVENT_MOUSE_MOVE && !setPipsWithMouse)
   {
-    switch(lparam) 
-    { 
-    case KEY_CTRL:
+    // If the center mouse button is pressed for the first time, set user input waiting state
+    if ((((uint)sparam) & 16) == 16)
+    {
       Comment("Waiting user to measure pip distance with crosshair cursor...");
       firstPrice = 0.;
       secondPrice = 0.;
       setPipsWithMouse = true;
-      break;
-    default:
-      break;
-    } 
-    ChartRedraw();
+    }
   }
   else if (id == CHARTEVENT_MOUSE_MOVE && setPipsWithMouse)
   {
