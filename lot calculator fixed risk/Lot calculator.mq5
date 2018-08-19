@@ -552,34 +552,37 @@ void OnChartEvent(const int id,
     else if ( (indicatorState == IndicatorStates::SetBuyOrderWithMouse) ||
               (indicatorState == IndicatorStates::SetSellOrderWithMouse) )
     {
-      // Prepare variables 
-      int x =(int)lparam; 
-      int y =(int)dparam; 
-      datetime dt = 0; 
-      double price = 0; 
-      int window = 0;
-      
-      bool ok = ChartXYToTimePrice(0, x, y, window, dt, price);
-      
-      if(ok)
-      {
-        ObjectDelete(0, NAME_OPENLINE);
-        ObjectCreate(0, NAME_OPENLINE, OBJ_HLINE, window, dt, price);
-        ObjectSetInteger(0, NAME_OPENLINE, OBJPROP_COLOR, clrGreen);
-        
-        double distance = Pips / (double)pipsMultiplier;
-        if(indicatorState == IndicatorStates::SetBuyOrderWithMouse)
-        {
-          price -= distance;
-        }
-        else
-        {
-          price += distance;
-        }
-        ObjectDelete(0, NAME_STOPLINE);
-        ObjectCreate(0, NAME_STOPLINE, OBJ_HLINE, window, dt, price);
-        ChartRedraw();
-      }
+      DrawHorizontalLines((int)lparam, (int)dparam);
     }
+  }
+}
+
+void DrawHorizontalLines(int x, int y)
+{
+  // Prepare variables 
+  datetime dt = 0; 
+  double price = 0; 
+  int window = 0;
+  
+  bool ok = ChartXYToTimePrice(0, x, y, window, dt, price);
+  
+  if(ok)
+  {
+    ObjectDelete(0, NAME_OPENLINE);
+    ObjectCreate(0, NAME_OPENLINE, OBJ_HLINE, window, dt, price);
+    ObjectSetInteger(0, NAME_OPENLINE, OBJPROP_COLOR, clrGreen);
+    
+    double distance = Pips / (double)pipsMultiplier;
+    if(indicatorState == IndicatorStates::SetBuyOrderWithMouse)
+    {
+      price -= distance;
+    }
+    else
+    {
+      price += distance;
+    }
+    ObjectDelete(0, NAME_STOPLINE);
+    ObjectCreate(0, NAME_STOPLINE, OBJ_HLINE, window, dt, price);
+    ChartRedraw();
   }
 }
