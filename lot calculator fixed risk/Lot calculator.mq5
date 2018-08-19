@@ -1,18 +1,28 @@
 //+------------------------------------------------------------------+
 //|                                               Lot Calculator.mq5 |
-//|                                         Copyleft 2018, zebedeig |
+//|                                          Copyleft 2018, zebedeig |
 //|                           https://www.mql5.com/en/users/zebedeig |
 //+------------------------------------------------------------------+
 
+// Usage:
+// The default risk (percentage of your account) is set to 2%. You can"
+// change it in the indicator properties panel."
+// 1) Click center mouse button to enter pip distance evaluation tool;"
+// 2) Drag crosshair cursor to select the pip distance you want to risk."
+// 3) Present tool immediately evaluates the order lot size to match "
+//    the predefined risk. You MUST put a stop loss with just specified"
+//    pips distance."
+// 4) Press 'B' and click the chart to open a buy order on clicked price"
+//    level (BUY STOP or MARKET BUY depending on actual symbol price)."
+//    Press 'S' and click the chart to open a sell order on clicked price"
+//    level (SELL STOP or MARKET SELL depending on actual symbol price)."
+// 5) Remember to put a stop loss at just specified pips distance"
+
 #property copyright    "Copyleft 2018, by zebedeig"
 #property link         "https://www.mql5.com/en/users/zebedeig"
-#property version      "1.00"
-#property description  "Tool used to calculate the correct lot size to trade, given a fixed risk"
-#property description  " and a number of pips."
-#property description  "Simply enter the number of pips of your desired stop loss order, and the"
-#property description  " indicator will show you the number of lots to trade based on your"
-#property description  " total account amount, your account currency and present chart currency"
-#property description  " pair."
+#property version      "2.00"
+#property description  "Tool used to calculate the correct lot size to trade, given a fixed risk and a number of pips."
+#property description  "You can also open orders by a single mouse click with just evaluated lot size."
 
 #property strict
 #property indicator_chart_window
@@ -23,6 +33,9 @@
 #define MODE_DIGITS
 #define KEY_F 70
 #define KEY_CTRL 17
+#define KEY_B 66
+#define KEY_S 83
+//#define DEBUGGING
 
 int Pips = 165; // Stop loss distance from open order
 input double Risk = 0.02; // Free margin fraction you want to risk for the trade
@@ -31,8 +44,17 @@ input int SimulatedAccountBalance = 2000; // Specify here a simulated balance va
 double point; // Used to handle the correct digits number
 double firstPrice = 0.; // Used to set Pips value by clicking on the chart
 double secondPrice = 0.; // Used to set Pips value by clicking on the chart
-bool setPipsWithMouse = false; // Flag to enable setting Pips value by clicking on the chart
 int pipsMultiplier = 1;
+double lots;
+enum IndicatorStates
+{
+  Idle,
+  WaitSetFirstPrice,     // Flag to enable evaluating Pips value by clicking on the chart
+  WaitSetSecondPrice,    // Flag to enable evaluating Pips value by clicking on the chart
+  SetBuyOrderWithMouse,  // Flag to enable put buy order by clicking on the chart
+  SetSellOrderWithMouse  // Flag to enable put sell order by clicking on the chart
+};
+IndicatorStates indicatorState = Idle;
 
 //+------------------------------------------------------------------+
 //| Custom indicator initialization function                         |
@@ -139,11 +161,11 @@ void DoWork()
   // Check if point-and-click issue determined zero pips
   if(Pips <= 0)
   {
-    Comment("Invalid 'Pips' value. Use crosshair again.");
+    Comment("Invalid 'Pips' value. Use crosshair again (click on first price level and release to second price level).");
     return;
   }
 
-  double lots = Risk * freeMargin / (pipValue * Pips);
+  lots = Risk * freeMargin / (pipValue * Pips);
   if(lots <= 0)
   {
     Comment("Unable to get lot value...");
@@ -235,38 +257,213 @@ void OnChartEvent(const int id,
   // See https://www.mql5.com/en/forum/93077
   // See https://docs.microsoft.com/en-us/dotnet/api/system.windows.forms.keys?redirectedfrom=MSDN&view=netframework-4.7.2
   
-  //if(id == CHARTEVENT_KEYDOWN)
-  //{
-  //  switch(lparam) 
-  //  { 
-  //  case KEY_CTRL:
-  //    Comment("Waiting user to measure pip distance with crosshair cursor...");
-  //    firstPrice = 0.;
-  //    secondPrice = 0.;
-  //    setPipsWithMouse = true;
-  //    break;
-  //  default:
-  //    break;
-  //  } 
-  //  ChartRedraw();
-  //}
-  if (id == CHARTEVENT_MOUSE_MOVE && !setPipsWithMouse)
+  if (id == CHARTEVENT_KEYDOWN)
   {
-    // If the center mouse button is pressed for the first time, set user input waiting state
-    if ((((uint)sparam) & 16) == 16)
+    uint keyCode = (uint)lparam;
+    switch (keyCode) 
+    { 
+    case KEY_B:
+      Comment("Waiting user to click to open BUY order of ", lots, "lots risking ",Pips,"pips...");
+      indicatorState = IndicatorStates::SetBuyOrderWithMouse;
+      break;
+    case KEY_S:
+      Comment("Waiting user to click to open SELL order of ", lots, "lots risking ",Pips,"pips...");
+      indicatorState = IndicatorStates::SetSellOrderWithMouse;
+      break;
+    default:
+      indicatorState = IndicatorStates::Idle;
+      DoWork();
+      break;
+    }
+  }
+  else if (id == CHARTEVENT_MOUSE_MOVE)
+  {
+    uint mouseState = (uint)sparam;
+    
+    // If the center mouse button is pressed for the first time,
+    // AND state is not already "WaitSetFirstPrice",
+    // THEN enter "WaitSetFirstPrice" state
+    if ( ((mouseState & 16) == 16) && (indicatorState != IndicatorStates::WaitSetFirstPrice) )
     {
+      #ifdef DEBUGGING
+      Print("check center button pressed");
+      #endif
       Comment("Waiting user to measure pip distance with crosshair cursor...");
       firstPrice = 0.;
       secondPrice = 0.;
-      setPipsWithMouse = true;
+      indicatorState = IndicatorStates::WaitSetFirstPrice;
     }
-  }
-  else if (id == CHARTEVENT_MOUSE_MOVE && setPipsWithMouse)
-  {
-    // If the left mouse button is pressed for the first time, set first price
-    if((firstPrice == 0.) && 
-      ((((uint)sparam) & 1) == 1))
+    
+    // Else, if left mouse button is pressed
+    // AND state is "SetBuyOrderWithMouse"
+    // THEN open a buy order on price corresponding to mouse cursor position on chart
+    else if ( ((mouseState & 1) == 1) && (indicatorState == IndicatorStates::SetBuyOrderWithMouse) )
     {
+      #ifdef DEBUGGING
+      Print("launch buy");
+      #endif
+      // Prepare variables 
+      int x =(int)lparam; 
+      int y =(int)dparam; 
+      datetime dt = 0; 
+      double price = 0; 
+      int window = 0;
+      
+      bool ok = ChartXYToTimePrice(0, x, y, window, dt, price);
+      
+      if(!ok)
+      {
+        Print("ChartXYToTimePrice return error code: ",GetLastError());
+        indicatorState = IndicatorStates::Idle;
+      }
+      else
+      {
+        // If ask < clicked price, time to set a BUY Stop
+        double ask = SymbolInfoDouble(Symbol(), SYMBOL_ASK);
+        if(ask < price)
+        {
+          #ifdef DEBUGGING
+          Print("buy stop");
+          #endif
+          MqlTradeRequest request = {0};
+          request.action=TRADE_ACTION_PENDING;
+          request.symbol = Symbol();
+          request.volume = lots;
+          request.sl = 0;
+          request.tp = 0;
+          request.deviation=4;
+          request.price=price;
+          request.type=ORDER_TYPE_BUY_STOP; // order type ORDER_TYPE_BUY_LIMIT, ORDER_TYPE_SELL_LIMIT, ORDER_TYPE_BUY_STOP, ORDER_TYPE_SELL_STOP
+          request.type_filling=ORDER_FILLING_RETURN;
+          request.expiration=ORDER_TIME_GTC;
+          MqlTradeResult result = {0};
+          if(!OrderSend(request,result))
+          {
+            PrintFormat("OrderSend error %d",GetLastError());     // if unable to send the request, output the error code
+          }
+          // Information about the operation
+          PrintFormat("retcode=%u  deal=%I64u  order=%I64u",result.retcode,result.deal,result.order);
+        }
+        
+        // Else, need to set a MARKET BUY
+        else
+        {
+          #ifdef DEBUGGING
+          Print("market buy");
+          #endif
+          MqlTradeRequest request = {0};
+          request.action=TRADE_ACTION_DEAL;
+          request.symbol = Symbol();
+          request.volume = lots;
+          request.sl = 0;
+          request.tp = 0;
+          request.deviation=4;
+          request.price=price;
+          request.type=ORDER_TYPE_BUY;
+          request.type_filling=ORDER_FILLING_RETURN;
+          MqlTradeResult result = {0};
+          if(!OrderSend(request,result))
+          {
+            PrintFormat("OrderSend error %d",GetLastError());     // if unable to send the request, output the error code
+          }
+          // Information about the operation
+          PrintFormat("retcode=%u  deal=%I64u  order=%I64u",result.retcode,result.deal,result.order);
+        }
+        
+        // Return to normal state
+        DoWork();
+        indicatorState = IndicatorStates::Idle;
+      }
+    }
+    
+    // Else, if left mouse button is pressed
+    // AND state is "SetSellOrderWithMouse"
+    // THEN open a sell order on price corresponding to mouse cursor position on chart
+    else if ( ((mouseState & 1) == 1) && (indicatorState == IndicatorStates::SetSellOrderWithMouse) )
+    {
+      #ifdef DEBUGGING
+      Print("launch sell");
+      #endif
+     // Prepare variables 
+      int x =(int)lparam; 
+      int y =(int)dparam; 
+      datetime dt = 0; 
+      double price = 0; 
+      int window = 0;
+      
+      bool ok = ChartXYToTimePrice(0, x, y, window, dt, price);
+      
+      if(!ok)
+      {
+        Print("ChartXYToTimePrice return error code: ",GetLastError());
+        indicatorState = IndicatorStates::Idle;
+      }
+      else
+      {
+        // If bid > clicked price, time to set a SELL Stop
+        double bid = SymbolInfoDouble(Symbol(), SYMBOL_BID);
+        if(bid > price)
+        {
+          #ifdef DEBUGGING
+          Print("sell stop");
+          #endif
+          MqlTradeRequest request = {0};
+          request.action=TRADE_ACTION_PENDING;
+          request.symbol = Symbol();
+          request.volume = lots;
+          request.sl = 0;
+          request.tp = 0;
+          request.deviation=4;
+          request.price=price;
+          request.type=ORDER_TYPE_SELL_STOP; // order type ORDER_TYPE_BUY_LIMIT, ORDER_TYPE_SELL_LIMIT, ORDER_TYPE_BUY_STOP, ORDER_TYPE_SELL_STOP
+          request.type_filling=ORDER_FILLING_RETURN;
+          request.expiration=ORDER_TIME_GTC;
+          MqlTradeResult result = {0};
+          if(!OrderSend(request,result))
+          {
+            PrintFormat("OrderSend error %d",GetLastError());     // if unable to send the request, output the error code
+          }
+          // Information about the operation
+          PrintFormat("retcode=%u  deal=%I64u  order=%I64u",result.retcode,result.deal,result.order);
+        }
+        
+        // Else, need to set a MARKET SELL
+        else
+        {
+          #ifdef DEBUGGING
+          Print("market sell");
+          #endif
+          MqlTradeRequest request = {0};
+          request.action=TRADE_ACTION_DEAL;
+          request.symbol = Symbol();
+          request.volume = lots;
+          request.sl = 0;
+          request.tp = 0;
+          request.deviation=4;
+          request.price=price;
+          request.type=ORDER_TYPE_SELL;
+          request.type_filling=ORDER_FILLING_RETURN;
+          MqlTradeResult result = {0};
+          if(!OrderSend(request,result))
+          {
+            PrintFormat("OrderSend error %d",GetLastError());     // if unable to send the request, output the error code
+          }
+          // Information about the operation
+          PrintFormat("retcode=%u  deal=%I64u  order=%I64u",result.retcode,result.deal,result.order);
+        }
+        
+        // Return to normal state
+        DoWork();
+        indicatorState = IndicatorStates::Idle;
+      }
+    }
+    
+    // Else, if state is "WaitSetFirstPrice"
+    else if ( ((mouseState & 1) == 1) && (indicatorState == IndicatorStates::WaitSetFirstPrice) )
+    {
+      #ifdef DEBUGGING
+      Print("set first price");
+      #endif
       // Prepare variables 
       int x =(int)lparam; 
       int y =(int)dparam; 
@@ -284,13 +481,18 @@ void OnChartEvent(const int id,
       else
       {
         Print("firstPrice: ", firstPrice);
+        indicatorState = IndicatorStates::WaitSetSecondPrice;
       }
     }
-    // If the left mouse button is released for the first time, set second price
-    else if((firstPrice != 0.) && 
-      (secondPrice == 0.) && 
-      ((((uint)sparam) & 1) != 1))
+    
+    // If the left mouse button is released for the first time,
+    // AND state is "WaitSetSecondPrice"
+    // THEN set second price
+    if ( ((mouseState & 1) != 1) && (indicatorState == IndicatorStates::WaitSetSecondPrice) )
     {
+      #ifdef DEBUGGING
+      Print("set second price");
+      #endif
       // Prepare variables 
       int x =(int)lparam; 
       int y =(int)dparam; 
@@ -307,7 +509,7 @@ void OnChartEvent(const int id,
       }
       else
       {
-        setPipsWithMouse = false;
+        indicatorState = IndicatorStates::Idle;
         Pips = (int)(MathRound(MathAbs(firstPrice - secondPrice) * pipsMultiplier));
         Print("secondPrice: ", secondPrice, ", pip distance (rounded): ", Pips);
         DoWork();
@@ -316,5 +518,3 @@ void OnChartEvent(const int id,
     }
   }
 }
-
-//+------------------------------------------------------------------+
