@@ -176,15 +176,14 @@ void DoWork()
   // Truncate lot quantity to 2 decimal digits without rounding it
   lots = floor(lots * 100) / 100;
 
-  string CommentString = "\n" + "Your free margin: "+ DepositCurrency + " " + DoubleToString(freeMargin, 2) + "\n";
-  CommentString += "Risk selected: " + DoubleToString(Risk * 100, 0) + "%\n";
-  CommentString += "Risk selected: " + DepositCurrency + " " + DoubleToString(Risk * freeMargin, 2) + "\n";
-  CommentString += "-----------------------------------------------------------------\n";
-  CommentString += "Value of one pip trading 1 lot of " + Symbol() + ": " + DepositCurrency + " " + DoubleToString(pipValue, 3) + "\n";
-  CommentString += "Max lots of " + Symbol() + " to trade while risking " + DoubleToString(Pips, 1) + " pips: " + DoubleToString(lots, 2) + "\n";
-  CommentString += "-----------------------------------------------------------------\n";
+  string commentString = "\n" + "Your free margin: "+ DepositCurrency + " " + DoubleToString(freeMargin, 2) + "\n";
+  // commentString += "Value of one pip trading 1 lot of " + Symbol() + ": " + DepositCurrency + " " + DoubleToString(pipValue, 3) + "\n";
+  commentString += "Risk selected: " + DoubleToString(Risk * 100, 0) + "% (" + DepositCurrency + " " + DoubleToString(Risk * freeMargin, 2) + ")\n";
+  commentString += "Pips selected: " + DoubleToString(Pips, 1) + "\n";
+  commentString += "Max lots: " + DoubleToString(lots, 2) + "\n";
+  commentString += "Summary: to risk " + DepositCurrency +" "+ DoubleToString(Risk * freeMargin, 2) + " in " + DoubleToString(Pips, 1) + " pips, you can trade up to " + DoubleToString(lots, 2) + " lots of " + Symbol() + "\n";
 
-  Comment(CommentString);
+  Comment(commentString);
 }
 
 //+------------------------------------------------------------------+
