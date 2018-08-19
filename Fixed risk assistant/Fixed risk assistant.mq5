@@ -27,6 +27,7 @@
 #define KEY_CTRL 17
 #define KEY_B 66
 #define KEY_S 83
+#define KEY_C 67
 //#define DEBUGGING
 #define NAME_LINE1 "HLine1LC"
 #define NAME_LINE2 "HLine2LC"
@@ -259,9 +260,14 @@ void OnChartEvent(const int id,
       }
       SendOrder(false);
       break;
+    case KEY_C:
+      ObjectDelete(0, NAME_LINE1);
+      ObjectDelete(0, NAME_LINE2);
+      ChartRedraw();
+      programState = ProgramStates::Idle;
+      break;
     default:
       programState = ProgramStates::Idle;
-      DoWork();
       break;
     }
   }
@@ -397,7 +403,7 @@ void SendOrder(bool buy)
       request.deviation = 4;
       request.price = price;
       request.type = ORDER_TYPE_BUY_STOP; // order type ORDER_TYPE_BUY_LIMIT, ORDER_TYPE_SELL_LIMIT, ORDER_TYPE_BUY_STOP, ORDER_TYPE_SELL_STOP
-      request.type_filling = ORDER_FILLING_RETURN;
+      request.type_filling = ORDER_FILLING_FOK;
       request.expiration = ORDER_TIME_GTC;
       MqlTradeResult result = {0};
       if(!OrderSend(request,result))
@@ -423,7 +429,7 @@ void SendOrder(bool buy)
       request.deviation=4;
       request.price=price;
       request.type=ORDER_TYPE_BUY;
-      request.type_filling=ORDER_FILLING_RETURN;
+      request.type_filling=ORDER_FILLING_FOK;
       MqlTradeResult result = {0};
       if(!OrderSend(request,result))
       {
@@ -471,7 +477,7 @@ void SendOrder(bool buy)
       request.deviation=4;
       request.price=price;
       request.type=ORDER_TYPE_SELL_STOP; // order type ORDER_TYPE_BUY_LIMIT, ORDER_TYPE_SELL_LIMIT, ORDER_TYPE_BUY_STOP, ORDER_TYPE_SELL_STOP
-      request.type_filling=ORDER_FILLING_RETURN;
+      request.type_filling=ORDER_FILLING_FOK;
       request.expiration=ORDER_TIME_GTC;
       MqlTradeResult result = {0};
       if(!OrderSend(request,result))
@@ -497,7 +503,7 @@ void SendOrder(bool buy)
       request.deviation=4;
       request.price=price;
       request.type=ORDER_TYPE_SELL;
-      request.type_filling=ORDER_FILLING_RETURN;
+      request.type_filling=ORDER_FILLING_FOK;
       MqlTradeResult result = {0};
       if(!OrderSend(request,result))
       {
