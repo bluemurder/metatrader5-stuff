@@ -16,7 +16,6 @@
 //    level (BUY STOP or MARKET BUY depending on actual symbol price)."
 //    Press 'S' and click the chart to open a sell order on clicked price"
 //    level (SELL STOP or MARKET SELL depending on actual symbol price)."
-// 5) Remember to put a stop loss at just specified pips distance"
 
 #property copyright    "Copyleft 2018, by zebedeig"
 #property link         "https://www.mql5.com/en/users/zebedeig"
@@ -36,8 +35,10 @@
 #define KEY_B 66
 #define KEY_S 83
 //#define DEBUGGING
+#define NAME_OPENLINE "Order Line"
+#define NAME_STOPLINE "StopLoss Line"
 
-int Pips = 165; // Stop loss distance from open order
+double Pips = 165; // Stop loss distance from open order
 input double Risk = 0.02; // Free margin fraction you want to risk for the trade
 input bool useTrueAccountBalance = true; // Check to read the actual free margin of your balance, uncheck to specify it
 input int SimulatedAccountBalance = 2000; // Specify here a simulated balance value 
@@ -180,7 +181,7 @@ void DoWork()
   CommentString += "Risk selected: " + DepositCurrency + " " + DoubleToString(Risk * freeMargin, 2) + "\n";
   CommentString += "-----------------------------------------------------------------\n";
   CommentString += "Value of one pip trading 1 lot of " + Symbol() + ": " + DepositCurrency + " " + DoubleToString(pipValue, 3) + "\n";
-  CommentString += "Max lots of " + Symbol() + " to trade while risking " + IntegerToString(Pips) + " pips: " + DoubleToString(lots, 2) + "\n";
+  CommentString += "Max lots of " + Symbol() + " to trade while risking " + DoubleToString(Pips, 1) + " pips: " + DoubleToString(lots, 2) + "\n";
   CommentString += "-----------------------------------------------------------------\n";
 
   Comment(CommentString);
@@ -256,6 +257,7 @@ void OnChartEvent(const int id,
   // are ignored while another CTRL key is pressed.
   // See https://www.mql5.com/en/forum/93077
   // See https://docs.microsoft.com/en-us/dotnet/api/system.windows.forms.keys?redirectedfrom=MSDN&view=netframework-4.7.2
+  // https://www.mql5.com/en/docs/chart_operations/chartxytotimeprice
   
   if (id == CHARTEVENT_KEYDOWN)
   {
@@ -263,15 +265,29 @@ void OnChartEvent(const int id,
     switch (keyCode) 
     { 
     case KEY_B:
-      Comment("Waiting user to click to open BUY order of ", lots, "lots risking ",Pips,"pips...");
+      if(Pips <= 0)
+      {
+        Comment("Invalid 'Pips' value. Use crosshair again (click on first price level and release to second price level).");
+        indicatorState = IndicatorStates::Idle;
+        break;
+      }
+      Comment("Click to open BUY order of ", lots, " lots risking ", DoubleToString(Pips, 1), " pips... (ESC to cancel)");
       indicatorState = IndicatorStates::SetBuyOrderWithMouse;
       break;
     case KEY_S:
-      Comment("Waiting user to click to open SELL order of ", lots, "lots risking ",Pips,"pips...");
+      if(Pips <= 0)
+      {
+        Comment("Invalid 'Pips' value. Use crosshair again (click on first price level and release to second price level).");
+        indicatorState = IndicatorStates::Idle;
+        break;
+      }
+      Comment("Click to open SELL order of ", lots, " lots risking ", DoubleToString(Pips, 1), " pips... (ESC to cancel)");
       indicatorState = IndicatorStates::SetSellOrderWithMouse;
       break;
     default:
       indicatorState = IndicatorStates::Idle;
+      ObjectDelete(0, NAME_OPENLINE);
+      ObjectDelete(0, NAME_STOPLINE);
       DoWork();
       break;
     }
@@ -315,9 +331,14 @@ void OnChartEvent(const int id,
       {
         Print("ChartXYToTimePrice return error code: ",GetLastError());
         indicatorState = IndicatorStates::Idle;
+        ObjectDelete(0, NAME_OPENLINE);
+        ObjectDelete(0, NAME_STOPLINE);
       }
       else
       {
+        // To evaluate stop loss
+        double distance = Pips / (double)pipsMultiplier;
+          
         // If ask < clicked price, time to set a BUY Stop
         double ask = SymbolInfoDouble(Symbol(), SYMBOL_ASK);
         if(ask < price)
@@ -326,16 +347,16 @@ void OnChartEvent(const int id,
           Print("buy stop");
           #endif
           MqlTradeRequest request = {0};
-          request.action=TRADE_ACTION_PENDING;
+          request.action = TRADE_ACTION_PENDING;
           request.symbol = Symbol();
           request.volume = lots;
-          request.sl = 0;
+          request.sl = price - distance;
           request.tp = 0;
-          request.deviation=4;
-          request.price=price;
-          request.type=ORDER_TYPE_BUY_STOP; // order type ORDER_TYPE_BUY_LIMIT, ORDER_TYPE_SELL_LIMIT, ORDER_TYPE_BUY_STOP, ORDER_TYPE_SELL_STOP
-          request.type_filling=ORDER_FILLING_RETURN;
-          request.expiration=ORDER_TIME_GTC;
+          request.deviation = 4;
+          request.price = price;
+          request.type = ORDER_TYPE_BUY_STOP; // order type ORDER_TYPE_BUY_LIMIT, ORDER_TYPE_SELL_LIMIT, ORDER_TYPE_BUY_STOP, ORDER_TYPE_SELL_STOP
+          request.type_filling = ORDER_FILLING_RETURN;
+          request.expiration = ORDER_TIME_GTC;
           MqlTradeResult result = {0};
           if(!OrderSend(request,result))
           {
@@ -355,7 +376,7 @@ void OnChartEvent(const int id,
           request.action=TRADE_ACTION_DEAL;
           request.symbol = Symbol();
           request.volume = lots;
-          request.sl = 0;
+          request.sl = price - distance;
           request.tp = 0;
           request.deviation=4;
           request.price=price;
@@ -373,6 +394,8 @@ void OnChartEvent(const int id,
         // Return to normal state
         DoWork();
         indicatorState = IndicatorStates::Idle;
+        ObjectDelete(0, NAME_OPENLINE);
+        ObjectDelete(0, NAME_STOPLINE);
       }
     }
     
@@ -397,9 +420,14 @@ void OnChartEvent(const int id,
       {
         Print("ChartXYToTimePrice return error code: ",GetLastError());
         indicatorState = IndicatorStates::Idle;
+        ObjectDelete(0, NAME_OPENLINE);
+        ObjectDelete(0, NAME_STOPLINE);
       }
       else
       {
+        // To evaluate stop loss
+        double distance = Pips / (double)pipsMultiplier;
+        
         // If bid > clicked price, time to set a SELL Stop
         double bid = SymbolInfoDouble(Symbol(), SYMBOL_BID);
         if(bid > price)
@@ -411,7 +439,7 @@ void OnChartEvent(const int id,
           request.action=TRADE_ACTION_PENDING;
           request.symbol = Symbol();
           request.volume = lots;
-          request.sl = 0;
+          request.sl = price + distance;
           request.tp = 0;
           request.deviation=4;
           request.price=price;
@@ -437,7 +465,7 @@ void OnChartEvent(const int id,
           request.action=TRADE_ACTION_DEAL;
           request.symbol = Symbol();
           request.volume = lots;
-          request.sl = 0;
+          request.sl = price + distance;
           request.tp = 0;
           request.deviation=4;
           request.price=price;
@@ -455,6 +483,8 @@ void OnChartEvent(const int id,
         // Return to normal state
         DoWork();
         indicatorState = IndicatorStates::Idle;
+        ObjectDelete(0, NAME_OPENLINE);
+        ObjectDelete(0, NAME_STOPLINE);
       }
     }
     
@@ -485,10 +515,10 @@ void OnChartEvent(const int id,
       }
     }
     
-    // If the left mouse button is released for the first time,
+    // Else if the left mouse button is released for the first time,
     // AND state is "WaitSetSecondPrice"
     // THEN set second price
-    if ( ((mouseState & 1) != 1) && (indicatorState == IndicatorStates::WaitSetSecondPrice) )
+    else if ( ((mouseState & 1) != 1) && (indicatorState == IndicatorStates::WaitSetSecondPrice) )
     {
       #ifdef DEBUGGING
       Print("set second price");
@@ -510,9 +540,45 @@ void OnChartEvent(const int id,
       else
       {
         indicatorState = IndicatorStates::Idle;
-        Pips = (int)(MathRound(MathAbs(firstPrice - secondPrice) * pipsMultiplier));
-        Print("secondPrice: ", secondPrice, ", pip distance (rounded): ", Pips);
+        Pips = MathAbs(firstPrice - secondPrice) * pipsMultiplier;
+        Print("secondPrice: ", secondPrice, ", pip distance: ", DoubleToString(Pips, 1));
         DoWork();
+        ChartRedraw();
+      }
+    }
+    
+    // Else, if mouse is moving and one of the two place order states is active,
+    // print a horizontal green line on the cursor position
+    // plus another red line on stoploss zone. 
+    else if ( (indicatorState == IndicatorStates::SetBuyOrderWithMouse) ||
+              (indicatorState == IndicatorStates::SetSellOrderWithMouse) )
+    {
+      // Prepare variables 
+      int x =(int)lparam; 
+      int y =(int)dparam; 
+      datetime dt = 0; 
+      double price = 0; 
+      int window = 0;
+      
+      bool ok = ChartXYToTimePrice(0, x, y, window, dt, price);
+      
+      if(ok)
+      {
+        ObjectDelete(0, NAME_OPENLINE);
+        ObjectCreate(0, NAME_OPENLINE, OBJ_HLINE, window, dt, price);
+        ObjectSetInteger(0, NAME_OPENLINE, OBJPROP_COLOR, clrGreen);
+        
+        double distance = Pips / (double)pipsMultiplier;
+        if(indicatorState == IndicatorStates::SetBuyOrderWithMouse)
+        {
+          price -= distance;
+        }
+        else
+        {
+          price += distance;
+        }
+        ObjectDelete(0, NAME_STOPLINE);
+        ObjectCreate(0, NAME_STOPLINE, OBJ_HLINE, window, dt, price);
         ChartRedraw();
       }
     }
