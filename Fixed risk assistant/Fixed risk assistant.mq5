@@ -38,7 +38,7 @@ input int SimulatedAccountBalance = 2000; // Specify here a simulated balance va
 double point; // Used to handle the correct digits number
 double firstPrice = 0.; // Used to set Pips value by clicking on the chart
 double secondPrice = 0.; // Used to set Pips value by clicking on the chart
-int pipsMultiplier = 1;
+int pipsMultiplier;
 double lots;
 enum ProgramStates
 {
@@ -57,6 +57,8 @@ int OnInit()
 
   // Broker digits
   point = _Point;
+  
+  pipsMultiplier = 1;
 
   if((_Digits == 3) || (_Digits == 5))
   {
