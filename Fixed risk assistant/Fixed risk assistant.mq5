@@ -20,7 +20,7 @@
 
 #property copyright    "Copyleft 2020, by zebedeig"
 #property link         "https://www.mql5.com/en/users/zebedeig"
-#property version      "3.02"
+#property version      "3.03"
 #property description  "Tool used to calculate the correct lot size to trade, given a fixed risk and a number of pips."
 #property description  "You can also open orders by a single keyboard hit on just evaluated lot size."
 
@@ -43,10 +43,11 @@ double lots;
 enum ProgramStates
 {
   Idle,
+  WaitCrossHairPress,
   WaitSetFirstPrice,     // Flag to enable evaluating Pips value by clicking on the chart
   WaitSetSecondPrice    // Flag to enable evaluating Pips value by clicking on the chart
 };
-ProgramStates programState = WaitSetFirstPrice;
+ProgramStates programState = WaitCrossHairPress;
 
 int OnInit()
 {
@@ -235,13 +236,13 @@ void OnChartEvent(const int id,
       if(Pips <= 0)
       {
         Comment("Invalid 'Pips' value. Use crosshair again (click on first price level and release to second price level).");
-        programState = ProgramStates::WaitSetFirstPrice;
+        programState = ProgramStates::WaitCrossHairPress;
         break;
       }
       if(ObjectFind(0, NAME_LINE1) < 0)
       {
         Comment("Red lines not found. Use crosshair again (click on first price level and release to second price level).");
-        programState = ProgramStates::WaitSetFirstPrice;
+        programState = ProgramStates::WaitCrossHairPress;
         break;
       }
       SendOrder(true);
@@ -250,13 +251,13 @@ void OnChartEvent(const int id,
       if(Pips <= 0)
       {
         Comment("Invalid 'Pips' value. Use crosshair again (click on first price level and release to second price level).");
-        programState = ProgramStates::WaitSetFirstPrice;
+        programState = ProgramStates::WaitCrossHairPress;
         break;
       }
       if(ObjectFind(0, NAME_LINE1) < 0)
       {
         Comment("Red lines not found. Use crosshair again (click on first price level and release to second price level).");
-        programState = ProgramStates::WaitSetFirstPrice;
+        programState = ProgramStates::WaitCrossHairPress;
         break;
       }
       SendOrder(false);
@@ -265,10 +266,10 @@ void OnChartEvent(const int id,
       ObjectDelete(0, NAME_LINE1);
       ObjectDelete(0, NAME_LINE2);
       ChartRedraw();
-      programState = ProgramStates::WaitSetFirstPrice;
+      programState = ProgramStates::WaitCrossHairPress;
       break;
     default:
-      programState = ProgramStates::WaitSetFirstPrice;
+      programState = ProgramStates::WaitCrossHairPress;
       break;
     }
   }
