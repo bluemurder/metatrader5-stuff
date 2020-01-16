@@ -1,6 +1,6 @@
 //+------------------------------------------------------------------+
 //|                                         Fixed risk assistant.mq5 |
-//|                                          Copyleft 2018, zebedeig |
+//|                                          Copyleft 2020, zebedeig |
 //|                           https://www.mql5.com/en/users/zebedeig |
 //+------------------------------------------------------------------+
 
@@ -16,15 +16,14 @@
 //    (BUY STOP or MARKET BUY depending on actual symbol price)."
 //    Press 'S' to open a sell order on clicked price level"
 //    (SELL STOP or MARKET SELL depending on actual symbol price)."
+//    Press 'C' to erase just painted level lines.
 
-#property copyright    "Copyleft 2018, by zebedeig"
+#property copyright    "Copyleft 2020, by zebedeig"
 #property link         "https://www.mql5.com/en/users/zebedeig"
-#property version      "3.00"
+#property version      "3.01"
 #property description  "Tool used to calculate the correct lot size to trade, given a fixed risk and a number of pips."
 #property description  "You can also open orders by a single keyboard hit on just evaluated lot size."
 
-#define KEY_F 70
-#define KEY_CTRL 17
 #define KEY_B 66
 #define KEY_S 83
 #define KEY_C 67
@@ -152,6 +151,7 @@ void DoWork()
   commentString += "Pips selected: " + DoubleToString(Pips, 1) + "\n";
   commentString += "Max lots: " + DoubleToString(lots, 2) + "\n";
   commentString += "Summary: to risk " + DepositCurrency +" "+ DoubleToString(Risk * freeMargin, 2) + " in " + DoubleToString(Pips, 1) + " pips, you can trade up to " + DoubleToString(lots, 2) + " lots of " + Symbol() + "\n";
+  commentString += "Press B/S to set a BUY/SELL order, C to erase painted lines.\n";
 
   Comment(commentString);
 }
