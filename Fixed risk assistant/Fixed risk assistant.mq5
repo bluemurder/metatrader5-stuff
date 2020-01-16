@@ -222,10 +222,6 @@ void OnChartEvent(const int id,
   // Show the event parameters on the chart 
   //Comment(__FUNCTION__,": id=",id," lparam=",lparam," dparam=",dparam," sparam=",sparam);
   
-  // When pressing CTRL key, the pip distance evaluation by clicking on 
-  // the chart area is activated. The first mouse click sets the first 
-  // price; the second click sets the second price; other mouse clicks 
-  // are ignored while another CTRL key is pressed.
   // See https://www.mql5.com/en/forum/93077
   // See https://docs.microsoft.com/en-us/dotnet/api/system.windows.forms.keys?redirectedfrom=MSDN&view=netframework-4.7.2
   // https://www.mql5.com/en/docs/chart_operations/chartxytotimeprice
@@ -411,12 +407,12 @@ void SendOrder(bool buy)
       request.type_filling = ORDER_FILLING_FOK;
       request.expiration = ORDER_TIME_GTC;
       MqlTradeResult result = {0};
-      if(!OrderSend(request,result))
+      if(!OrderSend(request, result))
       {
-        PrintFormat("OrderSend error %d",GetLastError());     // if unable to send the request, output the error code
+        PrintFormat("OrderSend error %d", GetLastError());     // if unable to send the request, output the error code
       }
       // Information about the operation
-      PrintFormat("retcode=%u  deal=%I64u  order=%I64u",result.retcode,result.deal,result.order);
+      PrintFormat("retcode=%u  deal=%I64u  order=%I64u", result.retcode, result.deal, result.order);
     }
     
     // Else, need to set a MARKET BUY
@@ -426,22 +422,22 @@ void SendOrder(bool buy)
       Print("market buy");
       #endif
       MqlTradeRequest request = {0};
-      request.action=TRADE_ACTION_DEAL;
+      request.action = TRADE_ACTION_DEAL;
       request.symbol = Symbol();
       request.volume = lots;
       request.sl = stoploss;
       request.tp = 0;
-      request.deviation=4;
-      request.price=price;
-      request.type=ORDER_TYPE_BUY;
-      request.type_filling=ORDER_FILLING_FOK;
+      request.deviation = 4;
+      request.price = price;
+      request.type = ORDER_TYPE_BUY;
+      request.type_filling = ORDER_FILLING_FOK;
       MqlTradeResult result = {0};
-      if(!OrderSend(request,result))
+      if(!OrderSend(request, result))
       {
-        PrintFormat("OrderSend error %d",GetLastError());     // if unable to send the request, output the error code
+        PrintFormat("OrderSend error %d", GetLastError());     // if unable to send the request, output the error code
       }
       // Information about the operation
-      PrintFormat("retcode=%u  deal=%I64u  order=%I64u",result.retcode,result.deal,result.order);
+      PrintFormat("retcode=%u  deal=%I64u  order=%I64u", result.retcode, result.deal, result.order);
     }
     
     // Return to normal state
@@ -474,23 +470,23 @@ void SendOrder(bool buy)
       Print("sell stop");
       #endif
       MqlTradeRequest request = {0};
-      request.action=TRADE_ACTION_PENDING;
+      request.action = TRADE_ACTION_PENDING;
       request.symbol = Symbol();
       request.volume = lots;
       request.sl = stoploss;
       request.tp = 0;
-      request.deviation=4;
-      request.price=price;
-      request.type=ORDER_TYPE_SELL_STOP; // order type ORDER_TYPE_BUY_LIMIT, ORDER_TYPE_SELL_LIMIT, ORDER_TYPE_BUY_STOP, ORDER_TYPE_SELL_STOP
-      request.type_filling=ORDER_FILLING_FOK;
-      request.expiration=ORDER_TIME_GTC;
+      request.deviation = 4;
+      request.price = price;
+      request.type = ORDER_TYPE_SELL_STOP; // order type ORDER_TYPE_BUY_LIMIT, ORDER_TYPE_SELL_LIMIT, ORDER_TYPE_BUY_STOP, ORDER_TYPE_SELL_STOP
+      request.type_filling = ORDER_FILLING_FOK;
+      request.expiration = ORDER_TIME_GTC;
       MqlTradeResult result = {0};
-      if(!OrderSend(request,result))
+      if(!OrderSend(request, result))
       {
-        PrintFormat("OrderSend error %d",GetLastError());     // if unable to send the request, output the error code
+        PrintFormat("OrderSend error %d", GetLastError());     // if unable to send the request, output the error code
       }
       // Information about the operation
-      PrintFormat("retcode=%u  deal=%I64u  order=%I64u",result.retcode,result.deal,result.order);
+      PrintFormat("retcode=%u  deal=%I64u  order=%I64u", result.retcode, result.deal, result.order);
     }
 
     // Else, need to set a MARKET SELL
@@ -500,22 +496,22 @@ void SendOrder(bool buy)
       Print("market sell");
       #endif
       MqlTradeRequest request = {0};
-      request.action=TRADE_ACTION_DEAL;
+      request.action = TRADE_ACTION_DEAL;
       request.symbol = Symbol();
       request.volume = lots;
       request.sl = stoploss;
       request.tp = 0;
-      request.deviation=4;
-      request.price=price;
-      request.type=ORDER_TYPE_SELL;
-      request.type_filling=ORDER_FILLING_FOK;
+      request.deviation = 4;
+      request.price = price;
+      request.type = ORDER_TYPE_SELL;
+      request.type_filling = ORDER_FILLING_FOK;
       MqlTradeResult result = {0};
-      if(!OrderSend(request,result))
+      if(!OrderSend(request, result))
       {
-        PrintFormat("OrderSend error %d",GetLastError());     // if unable to send the request, output the error code
+        PrintFormat("OrderSend error %d", GetLastError());     // if unable to send the request, output the error code
       }
       // Information about the operation
-      PrintFormat("retcode=%u  deal=%I64u  order=%I64u",result.retcode,result.deal,result.order);
+      PrintFormat("retcode=%u  deal=%I64u  order=%I64u", result.retcode, result.deal, result.order);
     }
 
     // Return to normal state
