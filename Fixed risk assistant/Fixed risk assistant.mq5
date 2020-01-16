@@ -20,7 +20,7 @@
 
 #property copyright    "Copyleft 2020, by zebedeig"
 #property link         "https://www.mql5.com/en/users/zebedeig"
-#property version      "3.01"
+#property version      "3.02"
 #property description  "Tool used to calculate the correct lot size to trade, given a fixed risk and a number of pips."
 #property description  "You can also open orders by a single keyboard hit on just evaluated lot size."
 
@@ -31,8 +31,8 @@
 #define NAME_LINE1 "HLine1LC"
 #define NAME_LINE2 "HLine2LC"
 
-double Pips = 165; // Stop loss distance from open order
-input double Risk = 0.01; // Free margin fraction you want to risk for the trade
+double Pips = 0; // Stop loss distance from open order
+input double Risk = 0.05; // Free margin fraction you want to risk for the trade
 input bool useTrueAccountBalance = true; // Check to read the actual free margin of your balance, uncheck to specify it
 input int SimulatedAccountBalance = 2000; // Specify here a simulated balance value 
 double point; // Used to handle the correct digits number
@@ -46,7 +46,7 @@ enum ProgramStates
   WaitSetFirstPrice,     // Flag to enable evaluating Pips value by clicking on the chart
   WaitSetSecondPrice    // Flag to enable evaluating Pips value by clicking on the chart
 };
-ProgramStates programState = Idle;
+ProgramStates programState = WaitSetFirstPrice;
 
 int OnInit()
 {
@@ -90,7 +90,10 @@ void OnDeinit(const int reason)
 
 void OnTick()
 {
-  DoWork();
+  if(programState == ProgramStates::Idle)
+  {
+    DoWork();
+  }
 }
 
 void DoWork()
@@ -147,12 +150,12 @@ void DoWork()
   // Truncate lot quantity to 2 decimal digits without rounding it
   lots = floor(lots * 100) / 100;
 
-  string commentString = "\n" + "Your free margin: "+ DepositCurrency + " " + DoubleToString(freeMargin, 2) + "\n";
+  string commentString = "Summary: to risk " + DepositCurrency +" "+ DoubleToString(Risk * freeMargin, 2) + " in " + DoubleToString(Pips, 1) + " pips, you can trade up to " + DoubleToString(lots, 2) + " lots of " + Symbol() + "\n";
+  commentString += "Your free margin: "+ DepositCurrency + " " + DoubleToString(freeMargin, 2) + "\n";
   // commentString += "Value of one pip trading 1 lot of " + Symbol() + ": " + DepositCurrency + " " + DoubleToString(pipValue, 3) + "\n";
   commentString += "Risk selected: " + DoubleToString(Risk * 100, 0) + "% (" + DepositCurrency + " " + DoubleToString(Risk * freeMargin, 2) + ")\n";
   commentString += "Pips selected: " + DoubleToString(Pips, 1) + "\n";
   commentString += "Max lots: " + DoubleToString(lots, 2) + "\n";
-  commentString += "Summary: to risk " + DepositCurrency +" "+ DoubleToString(Risk * freeMargin, 2) + " in " + DoubleToString(Pips, 1) + " pips, you can trade up to " + DoubleToString(lots, 2) + " lots of " + Symbol() + "\n";
   commentString += "Press B/S to set a BUY/SELL order, C to erase painted lines.\n";
 
   Comment(commentString);
@@ -236,13 +239,13 @@ void OnChartEvent(const int id,
       if(Pips <= 0)
       {
         Comment("Invalid 'Pips' value. Use crosshair again (click on first price level and release to second price level).");
-        programState = ProgramStates::Idle;
+        programState = ProgramStates::WaitSetFirstPrice;
         break;
       }
       if(ObjectFind(0, NAME_LINE1) < 0)
       {
         Comment("Red lines not found. Use crosshair again (click on first price level and release to second price level).");
-        programState = ProgramStates::Idle;
+        programState = ProgramStates::WaitSetFirstPrice;
         break;
       }
       SendOrder(true);
@@ -251,13 +254,13 @@ void OnChartEvent(const int id,
       if(Pips <= 0)
       {
         Comment("Invalid 'Pips' value. Use crosshair again (click on first price level and release to second price level).");
-        programState = ProgramStates::Idle;
+        programState = ProgramStates::WaitSetFirstPrice;
         break;
       }
       if(ObjectFind(0, NAME_LINE1) < 0)
       {
         Comment("Red lines not found. Use crosshair again (click on first price level and release to second price level).");
-        programState = ProgramStates::Idle;
+        programState = ProgramStates::WaitSetFirstPrice;
         break;
       }
       SendOrder(false);
@@ -266,10 +269,10 @@ void OnChartEvent(const int id,
       ObjectDelete(0, NAME_LINE1);
       ObjectDelete(0, NAME_LINE2);
       ChartRedraw();
-      programState = ProgramStates::Idle;
+      programState = ProgramStates::WaitSetFirstPrice;
       break;
     default:
-      programState = ProgramStates::Idle;
+      programState = ProgramStates::WaitSetFirstPrice;
       break;
     }
   }
