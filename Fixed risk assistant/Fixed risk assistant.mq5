@@ -1,26 +1,23 @@
 //+------------------------------------------------------------------+
 //|                                         Fixed risk assistant.mq5 |
-//|                                          Copyleft 2020, zebedeig |
+//|                                          Copyleft 2021, zebedeig |
 //|                           https://www.mql5.com/en/users/zebedeig |
 //+------------------------------------------------------------------+
 
-// Usage:
-// The default risk (percentage of your account) is set to 1%. You can"
-// change it in the indicator properties panel."
-// 1) Click center mouse button to enter pip distance evaluation tool;"
-// 2) Drag crosshair cursor to select the pip distance you want to risk."
-// 3) Present tool immediately evaluates the order lot size to match "
-//    the predefined risk. You MUST put a stop loss with just specified"
-//    pips distance."
-// 4) Press 'B' to open a buy order on selected price level"
-//    (BUY STOP or MARKET BUY depending on actual symbol price)."
-//    Press 'S' to open a sell order on clicked price level"
-//    (SELL STOP or MARKET SELL depending on actual symbol price)."
-//    Press 'C' to erase just painted level lines.
+// "Usage:"
+// "The default risk (percentage of your account) is set to 5%. You can change it in the indicator properties panel."
+// "1) Click center mouse button to enter pip distance evaluation tool;"
+// "2) Drag/release crosshair cursor to select the pip distance you want to risk."
+// "3) Present tool evaluates the order lot size to match specified risk."
+// "4) Press 'B' to buy at upper painted line. Expert sends a "
+// "   BUY STOP or MARKET BUY depending on current market price."
+// "   Press 'S' to sell at lower painted line. Expert sends a SELL STOP or MARKET SELL depending on current market price."
+// "   Press 'C' to erase just painted level lines."
+// "5) Present tool immediately set a STOP LOSS on the upper (lower) painted line if sell (buy) order selected."
 
-#property copyright    "Copyleft 2020, by zebedeig"
+#property copyright    "Copyleft 2021, by zebedeig"
 #property link         "https://www.mql5.com/en/users/zebedeig"
-#property version      "3.03"
+#property version      "3.04"
 #property description  "Tool used to calculate the correct lot size to trade, given a fixed risk and a number of pips."
 #property description  "You can also open orders by a single keyboard hit on just evaluated lot size."
 
@@ -32,14 +29,18 @@
 #define NAME_LINE2 "HLine2LC"
 
 double Pips = 0; // Stop loss distance from open order
-input double Risk = 0.05; // Free margin fraction you want to risk for the trade
-input bool useTrueAccountBalance = true; // Check to read the actual free margin of your balance, uncheck to specify it
-input int SimulatedAccountBalance = 2000; // Specify here a simulated balance value 
+input double Risk = 0.05; // Free margin fraction to risk for the trade.
+input bool UseTrueAccountBalance = true; // true(false) = use free(simulated) margin of your balance.
+input bool RoundLotsInsteadOfTruncate = true; // true(false) = round(truncate) the evaluated lots to valid size.
+input int SimulatedAccountBalance = 2000; // Simulated account free margin value.
 double point; // Used to handle the correct digits number
 double firstPrice = 0.; // Used to set Pips value by clicking on the chart
 double secondPrice = 0.; // Used to set Pips value by clicking on the chart
 int pipsMultiplier;
 double lots;
+double min_lot; // SYMBOL_VOLUME_MIN
+double max_lot; // SYMBOL_VOLUME_MAX
+double step_lot; // SYMBOL_VOLUME_STEP
 enum ProgramStates
 {
   Idle,
@@ -77,6 +78,12 @@ int OnInit()
     pipsMultiplier *= 10;
   }
   
+  // retrieve account min/max/step lot sizes
+  min_lot = SymbolInfoDouble(_Symbol,SYMBOL_VOLUME_MIN);
+  max_lot = SymbolInfoDouble(_Symbol,SYMBOL_VOLUME_MAX);
+  step_lot = SymbolInfoDouble(_Symbol, SYMBOL_VOLUME_STEP);
+
+  // main rontine  
   DoWork();
   
   return(INIT_SUCCEEDED);
@@ -104,7 +111,7 @@ void DoWork()
   double freeMargin = 0;
 
   // Evaluate free margin
-  if(useTrueAccountBalance)
+  if(UseTrueAccountBalance)
   {
     freeMargin = AccountInfoDouble(ACCOUNT_FREEMARGIN);
   }
@@ -147,16 +154,38 @@ void DoWork()
     Comment("Unable to get lot value...");
     return;
   }
-
+  
+  double num_steps;
+  if(RoundLotsInsteadOfTruncate)
+  {
+    num_steps = round(lots / step_lot);
+    // Security check. If num_steps equal to one, it is possible that the minimum lot size increases the risk in a uncontrolled way.
+    // In this case, the evaluation is forced to use round instead of floor.
+    if(num_steps == 1)
+    {
+      num_steps = floor(lots / step_lot);
+    }
+  }
+  else
+  {
+    num_steps = floor(lots / step_lot);
+  }
+  lots = num_steps * step_lot;
+  
   // Truncate lot quantity to 2 decimal digits without rounding it
-  lots = floor(lots * 100) / 100;
+  //lots = floor(lots * 100) / 100;
+  
+  // Normalization considering maximum allowed lot size (minimum not considered, ti can increase the risk without control)
+  if (lots > max_lot) lots = max_lot;
 
   string commentString = "Summary: to risk " + DepositCurrency +" "+ DoubleToString(Risk * freeMargin, 2) + " in " + DoubleToString(Pips, 1) + " pips, you can trade up to " + DoubleToString(lots, 2) + " lots of " + Symbol() + "\n";
   commentString += "Your free margin: "+ DepositCurrency + " " + DoubleToString(freeMargin, 2) + "\n";
   // commentString += "Value of one pip trading 1 lot of " + Symbol() + ": " + DepositCurrency + " " + DoubleToString(pipValue, 3) + "\n";
   commentString += "Risk selected: " + DoubleToString(Risk * 100, 0) + "% (" + DepositCurrency + " " + DoubleToString(Risk * freeMargin, 2) + ")\n";
   commentString += "Pips selected: " + DoubleToString(Pips, 1) + "\n";
-  commentString += "Max lots: " + DoubleToString(lots, 2) + "\n";
+  commentString += "Max lots: " + DoubleToString(lots, 2) + " ";
+  if(RoundLotsInsteadOfTruncate) commentString += "(rounded)\n";
+  else commentString += "(truncated)\n";
   commentString += "Press B/S to set a BUY/SELL order, C to erase painted lines.\n";
 
   Comment(commentString);
