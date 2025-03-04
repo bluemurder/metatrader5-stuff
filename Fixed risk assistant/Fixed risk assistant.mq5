@@ -425,7 +425,7 @@ void SendOrder(bool buy)
       #ifdef DEBUGGING
       Print("buy stop");
       #endif
-      MqlTradeRequest request = {0};
+      MqlTradeRequest request = {};
       request.action = TRADE_ACTION_PENDING;
       request.symbol = Symbol();
       request.volume = lots;
@@ -451,7 +451,7 @@ void SendOrder(bool buy)
       #ifdef DEBUGGING
       Print("market buy");
       #endif
-      MqlTradeRequest request = {0};
+      MqlTradeRequest request = {};
       request.action = TRADE_ACTION_DEAL;
       request.symbol = Symbol();
       request.volume = lots;
@@ -499,7 +499,7 @@ void SendOrder(bool buy)
       #ifdef DEBUGGING
       Print("sell stop");
       #endif
-      MqlTradeRequest request = {0};
+      MqlTradeRequest request = {};
       request.action = TRADE_ACTION_PENDING;
       request.symbol = Symbol();
       request.volume = lots;
@@ -525,7 +525,7 @@ void SendOrder(bool buy)
       #ifdef DEBUGGING
       Print("market sell");
       #endif
-      MqlTradeRequest request = {0};
+      MqlTradeRequest request = {};
       request.action = TRADE_ACTION_DEAL;
       request.symbol = Symbol();
       request.volume = lots;
@@ -535,7 +535,7 @@ void SendOrder(bool buy)
       request.price = price;
       request.type = ORDER_TYPE_SELL;
       request.type_filling = ORDER_FILLING_FOK;
-      MqlTradeResult result = {0};
+      MqlTradeResult result = {};
       if(!OrderSend(request, result))
       {
         PrintFormat("OrderSend error %d", GetLastError());     // if unable to send the request, output the error code
